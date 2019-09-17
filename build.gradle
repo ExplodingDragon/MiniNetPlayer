@@ -5,8 +5,12 @@ buildscript {
     ext.javaUtilVersion = 'v0.1-beta2'
 
     repositories {
+        mavenLocal()
+        maven { url 'https://maven.aliyun.com/repository/public/' }
         google()
+        mavenCentral()
         jcenter()
+        maven { url 'https://jitpack.io' }
         
     }
     dependencies {
