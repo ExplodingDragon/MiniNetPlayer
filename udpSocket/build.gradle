@@ -6,6 +6,7 @@ apply plugin: 'java'
 dependencies {
     implementation "com.github.ExplodingDragon.JavaUtils:DataBean:$javaUtilVersion"
     implementation "com.github.ExplodingDragon.JavaUtils:JavaUtils:$javaUtilVersion"
+    implementation'com.google.code.gson:gson:2.8.5'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7"
 }
 
