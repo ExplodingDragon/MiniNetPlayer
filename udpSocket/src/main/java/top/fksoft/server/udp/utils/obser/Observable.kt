@@ -25,6 +25,9 @@ class Observable <T> constructor(private val threadPool: Executor = Executors.ne
     }
 
 
+    /**
+     *
+     */
     fun notifyObservers(t: T) {
         val arr:Array<Any> = kotlin.run {
             synchronized(this){
@@ -33,7 +36,9 @@ class Observable <T> constructor(private val threadPool: Executor = Executors.ne
         }
         arr.forEach {
             val observer = it as Observer<T>
-            observer.update(t)
+            threadPool.execute {
+                observer.update(t)
+            }
         }
     }
 
