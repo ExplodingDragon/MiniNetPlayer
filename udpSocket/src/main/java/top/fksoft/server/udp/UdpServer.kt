@@ -28,19 +28,20 @@ class UdpServer(
     private var tag:String
     set(value) {
         val byteArray = value.toByteArray(Charsets.US_ASCII)
-        val size = if (byteArray.size > TAG_SIZE) 3 else byteArray.size
+        val size = if (byteArray.size > TAG_SIZE) TAG_SIZE else byteArray.size
         for (i in 0 until size){
             tagBytes[i] = byteArray[i]
         }
     }
     get() = tagBytes.toString(Charsets.US_ASCII)
+
     private val tagBytes = ByteArray(TAG_SIZE)
 
     init {
         if (datagramSocket.isBound.not() || datagramSocket.isClosed) {
             throw SocketException("连接存在问题，无法初始化.")
         }
-        tag = "PIG"
+        tag = "AS"
     }
 
 
@@ -71,37 +72,9 @@ class UdpServer(
      */
     @Synchronized
     fun sendPacket(packet: Packet, info: NetworkInfo): Boolean {
-        synchronized(sendData) {
-            synchronized(packet) {
-                try {
-                    System.arraycopy(tagBytes, 0, sendData, 0, tagBytes.size)
-                    val byteData = packet.byteData
-                    System.arraycopy(byteData, 0, sendData, 0, byteData.size)
-                } catch (e: Exception) {
-                    logger.error("发送目标为$info 的数据包在复制中发生问题.", e)
-                    return false
-                }
-            }
-            try {
-                datagramSocket.send(
-                    DatagramPacket(
-                        sendData,
-                        0,
-                        sendData.size,
-                        InetAddress.getByName(info.ip),
-                        info.port
-                    )
-                )
-            } catch (e: Exception) {
-                logger.error("发送目标为$info 的数据包在发送中出现问题.", e)
-                return false
-            }
-        }
+
         return true
     }
-
-
-
 
     override fun close() {
 
@@ -114,7 +87,15 @@ class UdpServer(
          */
         const val InternetMTU = 576
         const val LocalMTU = 1492
-        const val TAG_SIZE = 11
+        const val TAG_SIZE = 2
+
+        /**
+         * CRC32 长度
+         * 采用crc32判断类型
+         */
+        const val TYPE_SIZE = 8
+
+        const val HEADER_SIZE = TAG_SIZE + TYPE_SIZE
 
         fun calculationUdpByteSize(mtu: Int) = mtu - 20 - 8
 
