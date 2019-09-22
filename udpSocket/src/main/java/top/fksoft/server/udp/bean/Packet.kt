@@ -1,6 +1,5 @@
 package top.fksoft.server.udp.bean
 
-import jdkUtils.data.StringUtils
 import top.fksoft.server.udp.UdpServer.Companion.DefaultPacketSize
 import top.fksoft.server.udp.UdpServer.Companion.TAG_SIZE
 
@@ -10,9 +9,7 @@ import top.fksoft.server.udp.UdpServer.Companion.TAG_SIZE
  */
 open class Packet(mtuSize: Int = DefaultPacketSize){
 
-    /**
-     * 实际容纳的数据包大小，保证不分片大小
-     */
+
     val maxiDataSize = mtuSize - TAG_SIZE
     val byteData = ByteArray(maxiDataSize)
 

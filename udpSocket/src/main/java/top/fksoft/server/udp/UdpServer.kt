@@ -3,7 +3,6 @@ package top.fksoft.server.udp
 import jdkUtils.logcat.Logger
 import top.fksoft.bean.NetworkInfo
 import top.fksoft.server.udp.bean.Packet
-import top.fksoft.server.udp.utils.obser.Observable
 import java.io.Closeable
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -36,7 +35,6 @@ class UdpServer(
     }
     get() = tagBytes.toString(Charsets.US_ASCII)
     private val tagBytes = ByteArray(TAG_SIZE)
-    private val observable = Observable<Packet>()
 
     init {
         if (datagramSocket.isBound.not() || datagramSocket.isClosed) {
