@@ -5,6 +5,7 @@ import jdkUtils.logcat.Logger
 import top.fksoft.bean.NetworkInfo
 import top.fksoft.server.udp.bean.Packet
 import top.fksoft.server.udp.callback.Binder
+import top.fksoft.server.udp.callback.PacketListener
 import java.io.Closeable
 import java.io.IOException
 import java.net.DatagramPacket
@@ -124,7 +125,7 @@ class UdpServer(
     }
 
     @Synchronized
-    fun bindReceive(hash: String, binder: Binder) {
+    fun bindReceive(hash: String, listener: PacketListener) {
 
     }
 
