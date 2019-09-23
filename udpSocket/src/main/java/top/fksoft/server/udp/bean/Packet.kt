@@ -13,6 +13,9 @@ import top.fksoft.server.udp.UdpServer
  */
  open class Packet constructor(dataLen:Int){
 
+    /**
+     * 数据包类型判断
+     */
     val type = ByteArray(UdpServer.TYPE_SIZE)
 
     /**

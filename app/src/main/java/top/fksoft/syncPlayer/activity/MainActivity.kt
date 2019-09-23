@@ -26,9 +26,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun <T : View?> findViewById(id: Int): T {
-        return super.findViewById(id)
-    }
+
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_main,menu)

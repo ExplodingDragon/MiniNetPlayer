@@ -4,10 +4,16 @@ import jdkUtils.data.AtomicUtils
 import jdkUtils.logcat.Logger
 import top.fksoft.bean.NetworkInfo
 import top.fksoft.server.udp.bean.Packet
+import top.fksoft.server.udp.callback.Binder
 import java.io.Closeable
 import java.io.IOException
+import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.net.InetAddress
 import java.net.SocketException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
  * # 建立一个 UDP 管理服务器
@@ -24,8 +30,9 @@ import java.net.SocketException
  */
 class UdpServer(
     private val datagramSocket: DatagramSocket = DatagramSocket(31412),
-    private val mtuSize: Int = DefaultPacketSize
-    ) : Closeable {
+    private val mtuSize: Int = DefaultPacketSize,
+    private val threadPool: ExecutorService = Executors.newCachedThreadPool()
+) : Closeable {
     /**
      * 是否关闭服务器
      */
@@ -33,10 +40,12 @@ class UdpServer(
         get() = datagramSocket.isBound.not() || datagramSocket.isClosed
     private val tagBytes = ByteArray(TAG_SIZE)
     private val logger = Logger.getLogger(this)
+
+    private val receiveMap = ConcurrentHashMap<String,Binder>()
     /**
      *  发送中转
      */
-    private val packetData = ByteArray(mtuSize);
+    private val sendPacketData = ByteArray(mtuSize);
     /**
      * 最大可容纳数据包大小
      */
@@ -49,7 +58,7 @@ class UdpServer(
             for (i in 0 until size) {
                 tagBytes[i] = byteArray[i]
             }
-            System.arraycopy(tagBytes, 0, packetData, 0, TAG_SIZE)
+            System.arraycopy(tagBytes, 0, sendPacketData, 0, TAG_SIZE)
         }
         get() = tagBytes.toString(Charsets.US_ASCII)
 
@@ -81,24 +90,46 @@ class UdpServer(
     @Synchronized
     fun sendPacket(packet: Packet, info: NetworkInfo): Boolean {
         try {
-            if (isClosed){
+            if (isClosed) {
                 throw IOException("服务器已经关闭.")
             }
-            synchronized(packetData){
-                System.arraycopy(packet.type, 0, packetData, TAG_SIZE, TYPE_SIZE)
+            synchronized(sendPacketData) {
+                System.arraycopy(packet.type, 0, sendPacketData, TAG_SIZE, TYPE_SIZE)
                 //复制头
-                System.arraycopy(AtomicUtils.shortToBytes(packet.dataSize.toShort()), 0, packetData, TAG_SIZE + TYPE_SIZE , 2)
+                System.arraycopy(
+                    AtomicUtils.shortToBytes(packet.dataSize.toShort()),
+                    0,
+                    sendPacketData,
+                    TAG_SIZE + TYPE_SIZE,
+                    2
+                )
                 //复制数据实际大小
-
+                datagramSocket.send(
+                    DatagramPacket(
+                        sendPacketData,
+                        sendPacketData.size,
+                        InetAddress.getByName(info.ip),
+                        info.port
+                    )
+                )
+                //进行数据包发送
             }
 
-        }catch (e:Exception){
-            logger.error("此实例在发送数据时出现问题.",e)
+        } catch (e: Exception) {
+            logger.error("此实例在发送数据到$info 时出现问题.", e)
             return false
         }
-
+        logger.info("发送数据包到$info 完成.")
         return true
     }
+
+    @Synchronized
+    fun bindReceive(hash: String, binder: Binder) {
+
+    }
+
+
+
 
     override fun close() {
 
