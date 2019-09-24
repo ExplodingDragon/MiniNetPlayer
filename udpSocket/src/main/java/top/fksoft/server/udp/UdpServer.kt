@@ -6,6 +6,7 @@ import top.fksoft.bean.NetworkInfo
 import top.fksoft.server.udp.bean.Packet
 import top.fksoft.server.udp.callback.Binder
 import top.fksoft.server.udp.callback.PacketListener
+import top.fksoft.server.udp.factory.HashFactory
 import java.io.Closeable
 import java.io.IOException
 import java.net.DatagramPacket
@@ -19,62 +20,71 @@ import java.util.concurrent.Executors
 /**
  * # 建立一个 UDP 管理服务器
  * > 封装 的DatagramSocket
- *
  * 此udp传输无加密
- *
  * 在指定 mtu大小时，要保证小于网络传输层最小 MTU 大小（保证数据包不分片）
  *
- * ``` bash
- * # 数据包结构
- * [off:0,size:2 = 校验头][off:2,size:8 = 子类型确定][off:10,size:2 = 数据包真实长度][off:10,size : -1 = 数据内容]
- * ```
+ *  datagramSocket DatagramSocket 已经初始化的 ``` DatagramSocket ```
+ *
+ *  mtuSize Int 网络MTU大小
+ *
+ *  threadPool ExecutorService 非线性线程池
+ *
+ *  hashFactory HashFactory 哈希生成工厂类
+ *
+ * 默认已经全部实现，绑定了 ```31412``` 端口，使用标准互联网MTU大小，依赖 CRC32 来校验
+ *
  */
 class UdpServer(
     private val datagramSocket: DatagramSocket = DatagramSocket(31412),
-    private val mtuSize: Int = DefaultPacketSize,
-    private val threadPool: ExecutorService = Executors.newCachedThreadPool()
+    private val mtuSize: Int = InternetMTU,
+    private val threadPool: ExecutorService = Executors.newCachedThreadPool(),
+    private val hashFactory: HashFactory = HashFactory.default
 ) : Closeable {
+    private val logger = Logger.getLogger(this)
     /**
-     * 是否关闭服务器
+     * # 实际数据包大小
+     *  INTERNET UDP 减去报文和包头大小
+     */
+    val packetSize: Int = mtuSize - 20 - 8
+
+    /**
+     * # 数据包校验类型
+     * 如果 UDP 包头不符合则丢弃
+     */
+    private val tag = ByteArray(3)
+
+    fun setTAG(zero: Byte = 32, first: Byte = 16, second: Byte = 23) {
+        tag[0] = zero
+        tag[1] = first
+        tag[2] = second
+
+    }
+
+
+    /**
+     * 服务器是否关闭
      */
     val isClosed: Boolean
         get() = datagramSocket.isBound.not() || datagramSocket.isClosed
-    private val tagBytes = ByteArray(TAG_SIZE)
-    private val logger = Logger.getLogger(this)
 
-    private val receiveMap = ConcurrentHashMap<String,Binder>()
-    /**
-     *  发送中转
-     */
-    private val sendPacketData = ByteArray(mtuSize);
-    /**
-     * 最大可容纳数据包大小
-     */
-    val dataLength: Int
-        get() = mtuSize - HEADER_SIZE
-    var tag: String
-        set(value) {
-            val byteArray = value.toByteArray(Charsets.US_ASCII)
-            val size = if (byteArray.size > TAG_SIZE) TAG_SIZE else byteArray.size
-            for (i in 0 until size) {
-                tagBytes[i] = byteArray[i]
-            }
-            System.arraycopy(tagBytes, 0, sendPacketData, 0, TAG_SIZE)
-        }
-        get() = tagBytes.toString(Charsets.US_ASCII)
+    private val receiveMap = ConcurrentHashMap<String, Binder>()
+    // 监听的
+    private val sendPacketData = ByteArray(packetSize)
+    //发送数据包时使用中转
+
 
     init {
         if (isClosed) {
             throw SocketException("连接存在问题，无法初始化.")
         }
-        tag = "AD"
+        setTAG() //默认 TAG
     }
 
 
     /**
      * 得到本地端口号
      */
-    private val localPort by lazy {
+    val localPort by lazy {
         datagramSocket.localPort
     }
 
@@ -130,8 +140,6 @@ class UdpServer(
     }
 
 
-
-
     override fun close() {
 
     }
@@ -142,21 +150,10 @@ class UdpServer(
          * 标准 Internet 下 MTU 大小
          */
         const val InternetMTU = 576
-        const val LocalMTU = 1492
-        const val TAG_SIZE = 2
-
         /**
-         * CRC32 长度
-         * 采用crc32判断类型
+         * 一般情况下 局域网下最大MTU
          */
-        const val TYPE_SIZE = 8
-
-        const val HEADER_SIZE = TAG_SIZE + TYPE_SIZE + 2
-
-        fun calculationUdpByteSize(mtu: Int) = mtu - 20 - 8
-
-
-        val DefaultPacketSize = calculationUdpByteSize(InternetMTU)
+        const val LocalMTU = 1480
 
     }
 }

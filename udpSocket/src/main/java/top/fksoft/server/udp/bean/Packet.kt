@@ -2,39 +2,37 @@ package top.fksoft.server.udp.bean
 
 import top.fksoft.server.udp.UdpServer
 
+
 /**
- * # 数据包实体类
- *
- * @property dataLen Int 数据包最大长度，初始化用
- * @property type ByteArray 数据包类型
- * @property dataSize Int 使用的长度
- * @property byteData ByteArray 数据包内容
- * @constructor
+ *  数据包实体封装
  */
- open class Packet constructor(dataLen:Int){
-
+interface Packet {
     /**
-     * 数据包类型判断
+     * # 将RAW 数据解析
+     * @param bytes ByteArray 解析元数据
+     * @param offset Int 元数据偏移
+     * @param len Int 实际长度
+     * @return Boolean 是否解析成功
      */
-    val type = ByteArray(UdpServer.TYPE_SIZE)
+    fun decode(bytes: ByteArray, offset: Int, len: Int): Boolean
 
     /**
-     * #指定实际类型
+     * #将 数据还原成 RAW 数据
      *
-     * @param hash String 哈希值
+     * 将数据还原成原始byteArray，
+     * 注意，可用的实际大小为 array.size - offset，
+     * 如果数据放不下了，那么返回 -1 ，最好不要
+     * 在此抛出异常
+     *
+     * @param output ByteArray 填充的数组
+     * @param offset Int 填充偏移
+     * @return Int 实际填充的长度
      */
-    protected fun setType(hash: String) {
-        val array = hash.toByteArray(Charsets.US_ASCII)
-        System.arraycopy(array,0,type,0,if (type.size > array.size)array.size else type.size )
-    }
+    fun encode(output: ByteArray, offset: Int): Int
 
     /**
-     *  数据实际大小
+     * # 由这个值确定一个 HASH 值，方便确定数据包的唯一性
+     *  生成hash 的方案由 ``` UdpServer ```决定
      */
-    var dataSize:Int = 0
-    /**
-     * 原始数据存储
-     */
-    open val byteData:ByteArray = ByteArray(dataLen)
-
+    val hashSrc: String
 }
