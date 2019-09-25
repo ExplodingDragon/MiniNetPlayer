@@ -97,24 +97,31 @@ class UdpServer(
      * @param packet Packet 数据包
      * @param info NetworkInfo 远程服务器ip + 端口
      * @return Boolean 是否由系统发送
+     *
+     *
      */
     @Synchronized
     fun sendPacket(packet: Packet, info: NetworkInfo): Boolean {
         try {
-            if (isClosed) {
-                throw IOException("服务器已经关闭.")
-            }
             synchronized(sendPacketData) {
-                System.arraycopy(packet.type, 0, sendPacketData, TAG_SIZE, TYPE_SIZE)
-                //复制头
+                val dataSize = packet.encode(sendPacketData, tag.size + hashFactory.hashByteSize + Short.SIZE_BYTES)
+                //写入数据
+                if (dataSize == -1) {
+                    throw RuntimeException("在写入时发生错误 dataSize = -1 .")
+                }
+                hashFactory.createToByteArray(packet.hashSrc, sendPacketData, tag.size)
+                //定义数据类型（伪）
                 System.arraycopy(
-                    AtomicUtils.shortToBytes(packet.dataSize.toShort()),
+                    AtomicUtils.shortToBytes(dataSize.toShort()),
                     0,
                     sendPacketData,
-                    TAG_SIZE + TYPE_SIZE,
-                    2
+                    tag.size + hashFactory.hashByteSize,
+                    Short.SIZE_BYTES
                 )
-                //复制数据实际大小
+                //定义数据实际长度
+                if (isClosed) {
+                    throw IOException("服务器已经关闭.")
+                }
                 datagramSocket.send(
                     DatagramPacket(
                         sendPacketData,
@@ -125,7 +132,6 @@ class UdpServer(
                 )
                 //进行数据包发送
             }
-
         } catch (e: Exception) {
             logger.error("此实例在发送数据到$info 时出现问题.", e)
             return false
@@ -134,8 +140,13 @@ class UdpServer(
         return true
     }
 
+    /**
+     *
+     * @param hashSrc String
+     * @param listener PacketListener
+     */
     @Synchronized
-    fun bindReceive(hash: String, listener: PacketListener) {
+    fun bindReceive(hashSrc: String, listener: PacketListener) {
 
     }
 
