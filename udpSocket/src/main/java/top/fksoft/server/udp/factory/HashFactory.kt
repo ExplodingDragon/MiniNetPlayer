@@ -28,6 +28,17 @@ interface HashFactory{
      */
     fun createToByteArray(src: String, out: ByteArray,offset:Int): Int
 
+
+    /**
+     * # 解析Array下的哈希值
+     *
+     * @param array ByteArray 目标
+     * @param offset Int 偏移
+     * @return String 哈希值
+     * @throws IndexOutOfBoundsException 下标越界
+     */
+    @Throws(IndexOutOfBoundsException::class)
+    fun decodeHashStr(array: ByteArray, offset: Int = 0 ):String
     companion object{
         val default:HashFactory
          get() = DefaultHashFactory()
@@ -37,6 +48,13 @@ interface HashFactory{
      * # 基于CRC32的校验工具
      */
     class DefaultHashFactory:HashFactory{
+        override fun decodeHashStr(array: ByteArray, offset: Int): String {
+            if (offset + hashByteSize > array.size){
+                throw IndexOutOfBoundsException()
+            }
+            return String(array,offset,hashByteSize,Charsets.US_ASCII)
+        }
+
         override fun create(src: String): String = StringUtils.stringCrc32Hex(src)
 
         override val hashByteSize: Int
@@ -46,6 +64,7 @@ interface HashFactory{
             System.arraycopy(create(src).toByteArray(Charsets.US_ASCII),0,out,offset,hashByteSize)
             return hashByteSize
         }
+
 
     }
 }

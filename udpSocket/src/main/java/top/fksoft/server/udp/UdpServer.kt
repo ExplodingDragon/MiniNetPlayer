@@ -4,8 +4,7 @@ import jdkUtils.data.AtomicUtils
 import jdkUtils.logcat.Logger
 import top.fksoft.bean.NetworkInfo
 import top.fksoft.server.udp.bean.Packet
-import top.fksoft.server.udp.callback.Binder
-import top.fksoft.server.udp.callback.PacketListener
+import top.fksoft.server.udp.callback.ReceiveBinder
 import top.fksoft.server.udp.factory.HashFactory
 import java.io.Closeable
 import java.io.IOException
@@ -60,6 +59,18 @@ class UdpServer(
 
     }
 
+    private var isStarted = false
+
+    /**
+     *  进行 UDP 数据包监听的线程
+     */
+    private val receiveListener = Runnable {
+        isStarted = true
+        while (isClosed.not()){
+            //监听
+
+        }
+    }
 
     /**
      * 服务器是否关闭
@@ -67,7 +78,7 @@ class UdpServer(
     val isClosed: Boolean
         get() = datagramSocket.isBound.not() || datagramSocket.isClosed
 
-    private val receiveMap = ConcurrentHashMap<String, Binder>()
+    private val receiveMap = ConcurrentHashMap<String, ReceiveBinder>()
     // 监听的
     private val sendPacketData = ByteArray(packetSize)
     //发送数据包时使用中转
@@ -141,13 +152,15 @@ class UdpServer(
     }
 
     /**
-     *
+     * # UDP 包接受的回调监听事件
+     * > 注意，添加重复的会发生覆盖！
      * @param hashSrc String
      * @param listener PacketListener
      */
     @Synchronized
-    fun bindReceive(hashSrc: String, listener: PacketListener) {
-
+    fun bindReceive(hashSrc: String, binder:ReceiveBinder) {
+        val key = hashFactory.create(hashSrc)
+        receiveMap[key] = binder
     }
 
 
