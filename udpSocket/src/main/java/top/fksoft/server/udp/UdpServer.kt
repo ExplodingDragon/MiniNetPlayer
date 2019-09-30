@@ -47,6 +47,10 @@ class UdpServer(
     val packetSize: Int = mtuSize - 20 - 8
 
     /**
+     *  监听二级维护列表
+     */
+    private val receiveMap = ConcurrentHashMap<String, ReceiveBinder>()
+    /**
      * # 数据包校验类型
      * 如果 UDP 包头不符合则丢弃
      */
@@ -64,11 +68,20 @@ class UdpServer(
     /**
      *  进行 UDP 数据包监听的线程
      */
-    private val receiveListener = Runnable {
+    private val receiveListenRunnable = Runnable {
+        val receiveBytes = ByteArray(packetSize)
+        val receivePacket = DatagramPacket(receiveBytes,receiveBytes.size)
         isStarted = true
         while (isClosed.not()){
             //监听
+            datagramSocket.receive(receivePacket)
+            val remoteInfo = NetworkInfo(receivePacket.address.hostAddress, receivePacket.port)
+            // 远程服务器
+            val remoteTypeHash = hashFactory.decodeHashStr(receiveBytes, tag.size)
+            if (receiveMap.contains(remoteTypeHash)) {
+                val binder = receiveMap[remoteTypeHash]!!
 
+            }
         }
     }
 
@@ -78,8 +91,7 @@ class UdpServer(
     val isClosed: Boolean
         get() = datagramSocket.isBound.not() || datagramSocket.isClosed
 
-    private val receiveMap = ConcurrentHashMap<String, ReceiveBinder>()
-    // 监听的
+
     private val sendPacketData = ByteArray(packetSize)
     //发送数据包时使用中转
 
