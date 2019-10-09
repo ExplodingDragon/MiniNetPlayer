@@ -1,18 +1,19 @@
 package top.fksoft.server.udp.callback
 
-class ReceiveBinder (private val packetListener: PacketListener){
-    val byteData = ByteArray(1500)
-    var size = 0
-    
+import top.fksoft.server.udp.bean.Packet
+
+ interface ReceiveBinder<T : Packet>{
+
+    val packetListener:PacketListener<T>
 
     /**
+     *
      * @param src ByteArray
      * @param offset Int
      * @param len Int
+     * @return Packet
+     * @throws Exception
      */
-    final fun copy(src:ByteArray,offset:Int,len :Int){
-
-        size = len
-        System.arraycopy(src,offset,byteData,0,len)
-    }
+    @Throws(Exception::class)
+    fun create(src: ByteArray, offset: Int, len: Int):Packet
 }

@@ -49,7 +49,7 @@ class UdpServer(
     /**
      *  监听二级维护列表
      */
-    private val receiveMap = ConcurrentHashMap<String, ReceiveBinder>()
+    private val receiveMap = ConcurrentHashMap<String, ReceiveBinder<out Packet>>()
     /**
      * # 数据包校验类型
      * 如果 UDP 包头不符合则丢弃
@@ -63,7 +63,6 @@ class UdpServer(
 
     }
 
-    private var isStarted = false
 
     /**
      *  进行 UDP 数据包监听的线程
@@ -71,16 +70,20 @@ class UdpServer(
     private val receiveListenRunnable = Runnable {
         val receiveBytes = ByteArray(packetSize)
         val receivePacket = DatagramPacket(receiveBytes,receiveBytes.size)
-        isStarted = true
         while (isClosed.not()){
-            //监听
-            datagramSocket.receive(receivePacket)
-            val remoteInfo = NetworkInfo(receivePacket.address.hostAddress, receivePacket.port)
-            // 远程服务器
-            val remoteTypeHash = hashFactory.decodeHashStr(receiveBytes, tag.size)
-            if (receiveMap.contains(remoteTypeHash)) {
-                val binder = receiveMap[remoteTypeHash]!!
+            try {
+                //监 听
+                datagramSocket.receive(receivePacket)
+                val remoteInfo = NetworkInfo(receivePacket.address.hostAddress, receivePacket.port)
+                // 远程服务器
+                val remoteTypeHash = hashFactory.decodeHashStr(receiveBytes, tag.size)
+                if (receiveMap.contains(remoteTypeHash)) {
+                    val binder = receiveMap[remoteTypeHash]!!
+                    binder.create(receiveBytes)
 
+                }
+            }catch (e:Exception){
+                logger.error("udp 服务器在监听过程中发送错误。",e)
             }
         }
     }
@@ -170,7 +173,7 @@ class UdpServer(
      * @param listener PacketListener
      */
     @Synchronized
-    fun bindReceive(hashSrc: String, binder:ReceiveBinder) {
+    fun bindReceive(hashSrc: String, binder:ReceiveBinder<out Packet>) {
         val key = hashFactory.create(hashSrc)
         receiveMap[key] = binder
     }
